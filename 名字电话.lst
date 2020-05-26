@@ -1,0 +1,275 @@
+Microsoft (R) Macro Assembler Version 6.11		    05/26/20 17:43:31
+tempfile.asm						     Page 1 - 1
+
+
+				;author:六月飞冷雪
+				;沈美明版汇编教材，课后6.9代码
+ 0000				DATAS SEGMENT
+				    ;此处输入数据段代码 
+ 0000  0014 [			    inbuf db 20 dup(?)
+        00
+       ]
+ 0014  0014 [			    outname db 20 dup(?),'$'
+        00
+       ] 24
+ 0029  0008 [			    outphone db 8 dup(?),'$';防乱码
+        00
+       ] 24
+				    
+ 0032 69 6E 70 75 74 20		    STR1 db "input name:$"
+       6E 61 6D 65 3A 24
+ 003E 69 6E 70 75 74 20		    STR2 db "input telephone number:$"
+       74 65 6C 65 70 68
+       6F 6E 65 20 6E 75
+       6D 62 65 72 3A 24
+ 0056 50 48 4F 4E 45 20		    STR3 db "PHONE NUMBER LESS THAN 8$"
+       4E 55 4D 42 45 52
+       20 4C 45 53 53 20
+       54 48 41 4E 20 38
+       24
+ 006F 49 4E 50 55 54 20		    STR4 db "INPUT IS NOT NUMBER$"
+       49 53 20 4E 4F 54
+       20 4E 55 4D 42 45
+       52 24
+ 0083 4E 41 4D 45		    tabletitle db 'NAME',16 dup(20h),'TEL.',13,10,'$'
+       0010 [
+        20
+       ] 54 45 4C 2E 0D
+       0A 24
+ 009E				DATAS ENDS
+
+ 0000				STACKS SEGMENT
+				    ;此处输入堆栈段代码
+ 0000				STACKS ENDS
+
+ 0000				CODES SEGMENT
+ 0000				main proc far
+				    ASSUME CS:CODES,DS:DATAS,SS:STACKS
+
+ 0000  B8 ---- R		    MOV AX,DATAS
+ 0003  8E D8			    MOV DS,AX
+				    ;此处输入代码段代码
+				    
+ 0005  BA 0032 R		    MOV DX,OFFSET STR1
+ 0008  B4 09			    MOV AH,09H
+ 000A  CD 21			    INT 21H
+				    
+ 000C  E8 001D			    call INPUT_NAME;调用输入名字函数
+				    
+ 000F  BA 003E R		    MOV DX,OFFSET STR2
+ 0012  B4 09			    MOV AH,09H
+ 0014  CD 21			    INT 21H
+				    
+ 0016  E8 0039			    call INPHONE;调用输入电话函数
+				    
+				    ;输出回车
+ 0019  B2 0D				 mov dl,0dh
+ 001B  B4 02				 mov ah,2
+					
+ 001D  CD 21				 int 21h
+ 001F  B2 0A				 mov dl,0ah
+					
+ 0021  B4 02				 mov ah,2
+ 0023  CD 21				 int 21h
+				    
+ 0025  E8 0086			    call PRINTLINE;调用输出函数
+				    
+ 0028  B4 4C			    MOV AH,4CH
+ 002A  CD 21			    INT 21H
+ 002C				main endp
+				    
+ 002C				INPUT_NAME proc near
+ 002C  50			    push ax
+ 002D  53			    push bx
+ 002E  51			    push cx
+				    
+ 002F  B9 0000			    mov cx,0
+ 0032  B1 14			    mov cl,20;把cx变成最大的名字长
+				    ;调用输入函数
+ 0034  E8 0060			    call GETCHAR
+				    ;由于getchar中有一个循环操作，会减少cx，
+				    ;所以，cx现在的值是最大长度-实际长度
+ 0037  B8 0000			    mov ax,0
+ 003A  B0 14			    mov al,20;把ax变成最大名字长
+ 003C  2A C1			    sub al,cl;al存的是实际长度
+				    
+ 003E  BE 0000			    mov si,0
+ 0041  8B C8			    mov cx,ax;cx存的是实际长度
+				    ;把数据从inpuf放回到outname中
+ 0043				next1:
+ 0043  8A 84 0000 R			mov al,inbuf[si]
+ 0047  88 84 0014 R			mov outname[si],al
+ 004B  46				inc si
+					
+ 004C  E2 F5				loop next1
+				    
+ 004E  59			    pop cx
+ 004F  5B			    pop bx
+ 0050  58			    pop ax
+ 0051  C3			    ret
+ 0052				INPUT_NAME endp
+				    
+ 0052				INPHONE proc near
+ 0052  50				push ax
+ 0053  53			    push bx
+ 0054  51			    push cx
+					
+ 0055  B9 0000				mov cx,0
+ 0058  B1 08			    mov cl,8
+				    
+				    ;调用输入函数
+ 005A  E8 003A			    call GETCHAR
+				    
+ 005D  B8 0000			    mov ax,0
+ 0060  B0 08			    mov al,8
+ 0062  2A C1			    sub al,cl
+				    
+ 0064  8A C8			    mov cl,al
+ 0066  BE 0000				mov si,0
+					
+ 0069  80 F9 08				cmp cl,8
+ 006C  75 15				jnz error1;如果不足八位，弹出错误提示
+					;把数据从inpuf放到outphone中
+ 006E				next2:
+ 006E  8A 84 0000 R			mov al,inbuf[si]
+					;小于30H（比数字0大）
+ 0072  3C 30				cmp al,30H
+ 0074  7C 16				jl error2
+					;大于39H（比数字9大）
+ 0076  3C 39				cmp al,39H
+ 0078  77 12				ja error2
+ 007A  88 84 0029 R			mov outphone[si],al
+ 007E  46				inc si
+ 007F  E2 ED				loop next2
+					
+ 0081  EB 10				jmp exit2
+					
+					;不足8位错误
+ 0083				error1:
+ 0083  BA 0056 R			MOV DX,OFFSET STR3
+ 0086  B4 09			    MOV AH,09H
+ 0088  CD 21			    INT 21H
+ 008A  EB 07			    jmp exit2
+				    
+				    ;输入不是数字错误
+ 008C				error2:
+ 008C  BA 006F R			MOV DX,OFFSET STR4
+ 008F  B4 09			    MOV AH,09H
+ 0091  CD 21			    INT 21H
+ 0093				exit2:
+ 0093  59				pop cx
+ 0094  5B			    pop bx
+ 0095  58			    pop ax
+ 0096  C3				ret
+ 0097				INPHONE endp
+
+ 0097				GETCHAR proc near
+ 0097  50				 push ax
+ 0098  52				 push dx
+					 ;位置
+ 0099  BF 0000				 mov di,0
+ 009C				rotate:
+					;输入
+ 009C  B4 01				 mov ah,01
+ 009E  CD 21				 int 21h
+					;判断回车
+ 00A0  3C 0D				 cmp al,0dh
+ 00A2  74 07				 je exit1
+					;存入inpuf
+ 00A4  88 85 0000 R			 mov inbuf[di],al
+ 00A8  47				 inc di
+					
+ 00A9  E2 F1				 loop rotate
+ 00AB				exit1:
+ 00AB  5A				 pop dx
+ 00AC  58				 pop ax
+ 00AD  C3				ret
+ 00AE				GETCHAR endp
+
+ 00AE				PRINTLINE proc near
+ 00AE  50				 push ax
+ 00AF  52				 push dx
+					
+ 00B0  8D 16 0083 R			 lea dx,tabletitle
+ 00B4  B4 09				 mov ah,09
+ 00B6  CD 21				 int 21h
+					
+ 00B8  BA 0014 R			 mov dx,offset outname
+ 00BB  B4 09				 mov ah,09
+ 00BD  CD 21				 int 21h
+					
+ 00BF  BA 0029 R			 mov dx,offset outphone
+ 00C2  B4 09				 mov ah,09
+ 00C4  CD 21				 int 21h
+					
+ 00C6  5A				 pop dx
+ 00C7  58				 pop ax
+ 00C8  C3				ret
+ 00C9				PRINTLINE endp
+ 00C9				CODES ENDS
+				    END main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Microsoft (R) Macro Assembler Version 6.11		    05/26/20 17:43:31
+tempfile.asm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+CODES  . . . . . . . . . . . . .	16 Bit	 00C9	  Para	  Private 
+DATAS  . . . . . . . . . . . . .	16 Bit	 009E	  Para	  Private 
+STACKS . . . . . . . . . . . . .	16 Bit	 0000	  Para	  Private 
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+GETCHAR  . . . . . . . . . . . .	P Near	 0097	  CODES	Length= 0017 Public
+  rotate . . . . . . . . . . . .	L Near	 009C	  CODES	
+  exit1  . . . . . . . . . . . .	L Near	 00AB	  CODES	
+INPHONE  . . . . . . . . . . . .	P Near	 0052	  CODES	Length= 0045 Public
+  next2  . . . . . . . . . . . .	L Near	 006E	  CODES	
+  error1 . . . . . . . . . . . .	L Near	 0083	  CODES	
+  error2 . . . . . . . . . . . .	L Near	 008C	  CODES	
+  exit2  . . . . . . . . . . . .	L Near	 0093	  CODES	
+INPUT_NAME . . . . . . . . . . .	P Near	 002C	  CODES	Length= 0026 Public
+  next1  . . . . . . . . . . . .	L Near	 0043	  CODES	
+PRINTLINE  . . . . . . . . . . .	P Near	 00AE	  CODES	Length= 001B Public
+main . . . . . . . . . . . . . .	P Far	 0000	  CODES	Length= 002C Public
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+STR1 . . . . . . . . . . . . . .	Byte	 0032	  DATAS	
+STR2 . . . . . . . . . . . . . .	Byte	 003E	  DATAS	
+STR3 . . . . . . . . . . . . . .	Byte	 0056	  DATAS	
+STR4 . . . . . . . . . . . . . .	Byte	 006F	  DATAS	
+inbuf  . . . . . . . . . . . . .	Byte	 0000	  DATAS	
+outname  . . . . . . . . . . . .	Byte	 0014	  DATAS	
+outphone . . . . . . . . . . . .	Byte	 0029	  DATAS	
+tabletitle . . . . . . . . . . .	Byte	 0083	  DATAS	
+
+	   0 Warnings
+	   0 Errors
